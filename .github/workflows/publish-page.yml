@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Generate index.html
-        run: ./generate_index.sh
+        run: ./.github/workflows/scripts/generate-index.sh
 
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v1
