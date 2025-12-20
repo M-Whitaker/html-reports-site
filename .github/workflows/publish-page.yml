@@ -1,0 +1,25 @@
+name: Publish Page
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write          # Required to publish
+      contents: read        # Required to read repository content
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate index.html
+        run: ./generate_index.sh
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v1
+        with:
+          folder: .  # Root folder containing index.html
