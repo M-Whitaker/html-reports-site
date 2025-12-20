@@ -1,0 +1,92 @@
+name: Cleanup Unused Reports
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history to check file modification times
+      
+      - name: Find and remove unused directories
+        run: |
+          echo "🔍 Scanning for directories unused for 5+ days..."
+          
+          # Set the threshold (5 days ago in seconds since epoch)
+          THRESHOLD_DAYS=5
+          THRESHOLD_DATE=$(date -d "$THRESHOLD_DAYS days ago" +%s)
+          
+          # Track deleted directories
+          DELETED_DIRS=""
+          DELETE_COUNT=0
+          
+          # Find all top-level directories (excluding hidden ones and .github)
+          for dir in $(find . -maxdepth 1 -type d ! -name '.*' ! -name '.github' ! -name '.' | sed 's|^\./||'); do
+            echo "Checking directory: $dir"
+            
+            # Get the last commit date that modified this directory
+            LAST_MODIFIED=$(git log -1 --format=%ct -- "$dir" 2>/dev/null || echo "0")
+            
+            if [ "$LAST_MODIFIED" = "0" ]; then
+              echo "⚠️  No git history found for $dir, checking filesystem..."
+              # Fallback to filesystem modification time if no git history
+              LAST_MODIFIED=$(stat -c %Y "$dir" 2>/dev/null || echo "0")
+            fi
+            
+            if [ "$LAST_MODIFIED" -lt "$THRESHOLD_DATE" ] && [ "$LAST_MODIFIED" != "0" ]; then
+              DAYS_OLD=$(( ($(date +%s) - LAST_MODIFIED) / 86400 ))
+              echo "🗑️  Removing $dir (unused for $DAYS_OLD days)"
+              rm -rf "$dir"
+              DELETED_DIRS="${DELETED_DIRS}\n- $dir (unused for $DAYS_OLD days)"
+              DELETE_COUNT=$((DELETE_COUNT + 1))
+            else
+              if [ "$LAST_MODIFIED" != "0" ]; then
+                DAYS_OLD=$(( ($(date +%s) - LAST_MODIFIED) / 86400 ))
+                echo "✅ Keeping $dir (last modified $DAYS_OLD days ago)"
+              fi
+            fi
+          done
+          
+          echo "DELETE_COUNT=$DELETE_COUNT" >> $GITHUB_ENV
+          echo "DELETED_DIRS<<EOF" >> $GITHUB_ENV
+          echo -e "$DELETED_DIRS" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+      
+      - name: Commit and push changes
+        if: env.DELETE_COUNT > 0
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          git add -A
+          git commit -m "🧹 Cleanup: Removed ${{ env.DELETE_COUNT }} unused $([ ${{ env.DELETE_COUNT }} -eq 1 ] && echo 'directory' || echo 'directories')
+          
+          Directories removed:${{ env.DELETED_DIRS }}"
+          
+          git push
+      
+      - name: Create cleanup summary
+        if: always()
+        run: |
+          echo "## 🧹 Cleanup Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ env.DELETE_COUNT }}" -gt 0 ]; then
+            echo "**Removed ${{ env.DELETE_COUNT }} unused $([ ${{ env.DELETE_COUNT }} -eq 1 ] && echo 'directory' || echo 'directories'):**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "${{ env.DELETED_DIRS }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✨ No directories to clean up. All directories are recently active." >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Threshold:** 5 days of inactivity" >> $GITHUB_STEP_SUMMARY
+          echo "**Run time:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
