@@ -1,0 +1,3 @@
+"DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
+"Verifies that the /resource-status endpoint returns the correct content type as application/json","8","testGetResourceStatusContentType()","","2025-12-29","passed","2025-12-29","","com.example.demo.ResourceControllerTest","com.example.demo.ResourceControllerTest","testGetResourceStatusContentType"
+"Verifies that the /resource-status endpoint returns a valid JSON response with Pong message","1143","testGetResourceStatusReturnsPong()","","2025-12-29","passed","2025-12-29","","com.example.demo.ResourceControllerTest","com.example.demo.ResourceControllerTest","testGetResourceStatusReturnsPong"
