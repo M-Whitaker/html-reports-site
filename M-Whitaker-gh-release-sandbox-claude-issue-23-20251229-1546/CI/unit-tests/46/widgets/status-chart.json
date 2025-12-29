@@ -1,0 +1,1 @@
+[{"uid":"38d951b07873f636","name":"testGetResourceStatusReturnsPong()","time":{"start":1767026957075,"stop":1767026958385,"duration":1310},"status":"passed","severity":"normal"},{"uid":"dd0732e4ebd30bdf","name":"testGetResourceStatusContentType()","time":{"start":1767026958469,"stop":1767026958479,"duration":10},"status":"passed","severity":"normal"}]
